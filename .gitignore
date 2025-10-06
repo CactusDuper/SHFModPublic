@@ -44,3 +44,4 @@
 
 /SHFMod/x64
 !SHFMod/MinHook/lib/libMinHook.x64.lib
+!SHFMod/loader/dxgi.dll
