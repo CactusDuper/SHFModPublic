@@ -1,6 +1,6 @@
 # SHFMod
 
-VERY WIP mod for Silent Hill F. [Dumper-7](https://github.com/Encryqed/Dumper-7) used for generating UE stuff. Using code from [ImGui](https://github.com/ocornut/imgui) and [Universal Dear ImGui Hook](https://github.com/Sh0ckFR/Universal-Dear-ImGui-Hook). Certain Classes/Structs/etc have been modified. Code is quite messy, will be cleaned later.
+VERY WIP mod for Silent Hill F. [Dumper-7](https://github.com/Encryqed/Dumper-7) used for generating UE stuff. Using code from [ImGui](https://github.com/ocornut/imgui) and [Universal Dear ImGui Hook](https://github.com/Sh0ckFR/Universal-Dear-ImGui-Hook). [MinHook](https://github.com/TsudaKageyu/minhook) is used for hooking as well. Certain Classes/Structs/etc have been modified. Code is quite messy, will be cleaned later.
 
 ## Antivirus warnings/blocking/etc
 Some antiviruses WILL flag this as malware. It isn't. It gets flagged mostly due to hooking user input for the GUI/controls and due to scanning memory (needed in order to find certain functions/addresses).
