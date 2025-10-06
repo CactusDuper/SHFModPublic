@@ -56,7 +56,7 @@ void Hooks::HkHUDPostRender(SDK::AHUD* HUD) {
 
         if (GDrawProgressAndPlayerStateExtra) {
             float yPos = 50.0f;
-            float xPos = HUD->Canvas->SizeX - 450.0f;
+            float xPos = HUD->Canvas->SizeX - 450.0f; // TODO: Tweak
             HUD->Canvas->K2_DrawText(GFont, GCurrentGameStateName.c_str(), { xPos, yPos }, { 1.0f, 1.0f }, GREEN, 0, {}, {}, false, false, true, { 0,0,0,1 });
             yPos += 20;
             HUD->Canvas->K2_DrawText(GFont, L"--- Active Tags ---", { xPos, yPos }, { 1.0f, 1.0f }, RED, 0, {}, {}, false, false, true, { 0,0,0,1 });
@@ -66,6 +66,8 @@ void Hooks::HkHUDPostRender(SDK::AHUD* HUD) {
                 yPos += 20;
             }
         }
+
+        HUD->Canvas->K2_DrawText(GFont, L"SFH MOD ACTIVE", { HUD->Canvas->SizeX - 120.0f, 10.0f}, {1.0f, 1.0f}, RED, 0, {}, {}, false, false, true, {0,0,0,1});
 
         GPossibleTransitions.clear();
         DrawFSMInfo(HUD); // Need to populate GPossibleTransitions for drawing trigger info

@@ -174,9 +174,9 @@ void DrawPlayerStatus(SDK::AHUD* HUD) {
 
     std::vector<DisplayLine> lines;
 
-    const float COLUMN_WIDTH = 400.0f;
+    const float COLUMN_WIDTH = 300.0f;
     float startX = HUD->Canvas->SizeX - COLUMN_WIDTH;
-    float currentY = HUD->Canvas->SizeY / 2.0f - 150.0f;
+    float currentY = HUD->Canvas->SizeY / 2.0f - 150.0f; // TODO: Tweak
 
     auto AddLine = [&](std::wstring l, std::wstring v, const SDK::FLinearColor& c) {
         lines.push_back({ l, v, c });
