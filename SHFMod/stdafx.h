@@ -2,6 +2,7 @@
 #pragma once
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "MinHook/lib/libMinHook.x64.lib")
 
 #include <windows.h>
 #include <vector>
