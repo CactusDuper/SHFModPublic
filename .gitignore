@@ -43,3 +43,4 @@
 *.user
 
 /SHFMod/x64
+!SHFMod/MinHook/lib/libMinHook.x64.lib
