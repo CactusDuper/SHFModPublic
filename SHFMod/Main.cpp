@@ -59,25 +59,48 @@ DWORD MainThread(HMODULE Module) {
     std::vector<void*> AppendStringaddrs = scanner.Scan(Constants::PatternScan::AppendStringPattern, Constants::Hooking::AppendStringPatternSearchCount);
     bool appendStringFound = false;
     for (auto addr : AppendStringaddrs) {
-        if (!addr) { continue; }
+        if (!addr) {
+            std::cout << "SHOULD NOT BE POSSIBLE\n";
+            continue;
+        }
+
         auto real_addr = reinterpret_cast<uintptr_t>(addr);
+        std::cout << "real_addr: " << real_addr << "\n";
         uintptr_t AppendStringrva = real_addr - gameBase;
+        std::cout << "AppendStringrva: " << AppendStringrva << "\n";
         uint32_t AppendStringOffsetBase = *reinterpret_cast<uint32_t*>(real_addr + 0x3);
+        std::cout << "AppendStringOffsetBase: " << AppendStringOffsetBase << "\n";
         uint32_t AppendStringOffset = AppendStringOffsetBase + AppendStringrva + 0x7;
+        std::cout << "AppendStringOffset: " << AppendStringOffset << "\n";
         char* stringTest = reinterpret_cast<char*>(gameBase + AppendStringOffset);
 
         std::string cppStringTest(stringTest);
+        std::cout << "cppStringTest: " << cppStringTest << "\n";
         if (cppStringTest == "ForwardShadingQuality_") {
             uint32_t REALAppendStringOffsetBase = *reinterpret_cast<uint32_t*>(real_addr + 35);
             uint32_t REALAppendStringOffset = REALAppendStringOffsetBase + AppendStringrva + 35 + 4;
 
+            std::cout << "REALAppendStringOffsetBase: " << REALAppendStringOffsetBase << "\n";
+            std::cout << "REALAppendStringOffset: " << REALAppendStringOffset << "\n";
             SDK::Offsets::AppendString = REALAppendStringOffset;
             SDK::FName::AppendString = reinterpret_cast<void*>(gameBase + REALAppendStringOffset);
             appendStringFound = true;
             break;
         }
+        else{
+            std::cout << "ForwardShadingQuality_ was NOT FOUND PROPERLY!\n";
+        }
     }
 
+    std::cout << "AppendStringaddrs size: " << AppendStringaddrs.size() << "\n";
+    if(appendStringFound){
+        std::cout << "APPEND STRING WAS FOUND!\n";
+    }
+    else{
+        std::cout << "APPEND STRING WAS NOT FOUND!\n";
+    }
+    Sleep(500000);
+    
     // TODO: Exit on fail? Probably should as it will crash anyways...
     std::vector<void*> FMemoryMallocAddrs = scanner.Scan(Constants::PatternScan::FMemoryMallocPattern);
     if (FMemoryMallocAddrs.size() == 1) {
