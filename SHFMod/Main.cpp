@@ -55,13 +55,13 @@ DWORD MainThread(HMODULE Module) {
             SDK::UObject::GObjects.InitManually(manualInit);
             foundGObjects = true;
             Log("SUCCESS: GUObjectArray initialized.");
+            Log("SUCCESS: Resolved GUObjectArray address: 0x%llX", resolvedAddress);
         }
         else {
             Log("INFO: GUObjectArray pattern not found, retrying...");
             Sleep(Constants::Time::GUObjectArrayPollIntervalMs);
         }
     }
-    Log("SUCCESS: Resolved GUObjectArray address: 0x%llX", resolvedAddress);
 
     Log("INFO: Preparing to hook ProcessEvent...");
     void** Vft = SDK::UObject::GObjects->GetByIndex(0)->VTable;
@@ -86,14 +86,12 @@ DWORD MainThread(HMODULE Module) {
     std::vector<void*> AppendStringaddrs = scanner.Scan(Constants::PatternScan::AppendStringPattern, Constants::Hooking::AppendStringPatternSearchCount);
     Log("INFO: Found %zu potential candidates for AppendString.", AppendStringaddrs.size());
     bool appendStringFound = false;
-    for (auto addr : AppendStringaddrs) {
-        if (!addr) {
-            std::cout << "SHOULD NOT BE POSSIBLE\n";
-            continue;
-        }
+    for (size_t i = 0; i < AppendStringaddrs.size(); ++i) {
+        void* addr = AppendStringaddrs[i];
+        if (!addr) { continue; }
 
         auto real_addr = reinterpret_cast<uintptr_t>(addr);
-        Log("DEBUG: [Candidate %zu] Address: 0x%llX", i, real_addr);
+        Log("DEBUG: [Candidate %zu] Address: 0x%llX", real_addr);
         uintptr_t AppendStringrva = real_addr - gameBase;
         uint32_t AppendStringOffsetBase = *reinterpret_cast<uint32_t*>(real_addr + 0x3);
         uint32_t AppendStringOffset = AppendStringOffsetBase + AppendStringrva + 0x7;
