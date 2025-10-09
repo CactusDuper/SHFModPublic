@@ -4,11 +4,18 @@
 #include "SDK/BP_Pl_Hina_NocePlayerState_classes.hpp"
 #include "SDK/BP_Pl_Hina_PlayerController_classes.hpp"
 #include "SDK/GameNoce_classes.hpp"
-#include <windows.h>
 #include <cstdint>
+#include <chrono>
+#include <ctime>
+#include <fstream>
+#include <ios>
+#include <map>
+#include <mutex>
+#include <ostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <windows.h>
 
 extern HWND GMainWindow;
 extern int GOpenGUIKey;
@@ -340,4 +347,38 @@ namespace Constants {
     }
 
     static inline const char* WindowName = "SILENT HILL f  ";
+}
+
+
+static void Log(const char* fmt, ...) {
+    static std::mutex log_mutex;
+    std::lock_guard<std::mutex> guard(log_mutex);
+
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm time_info;
+    localtime_s(&time_info, &in_time_t);
+
+    std::ofstream log_file("SHFMod.log", std::ios_base::app);
+    if (!log_file.is_open()) {
+        OutputDebugStringA("SHFMod: Log file could not be opened.\n");
+        return;
+    }
+    
+    log_file << std::put_time(&time_info, "[%Y-%m-%d %H:%M:%S] ");
+
+    char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+
+    log_file << buffer << std::endl;
+
+    printf("%s\n", buffer);
+}
+
+static void LogFatal(const char* message) {
+    Log("FATAL ERROR: %s", message);
+    MessageBoxA(NULL, message, "Mod Fatal Error", MB_OK | MB_ICONERROR);
 }

@@ -20,15 +20,27 @@ DWORD MainThread(HMODULE Module) {
     freopen_s(&Dummy, "CONOUT$", "w", stdout);
     freopen_s(&Dummy, "CONIN$", "r", stdin);
 
-    MH_Initialize();
+    Log("--- Mod MainThread Started ---");
+
+    MH_STATUS status = MH_Initialize();
+    if (status != MH_OK) {
+        LogFatal("MinHook failed to initialize!");
+        return 1;
+    }
+    Log("SUCCESS: MinHook initialized.");
 
     uint64_t gameBase = (uint64_t)GetModuleHandle(0);
+    Log("INFO: Game base address: 0x%llX", gameBase);
 
+    Log("INFO: Waiting for main window: '%s'", Constants::WindowName);
     while (!GMainWindow) {
         Sleep(50);
         GMainWindow = (HWND)FindWindow(0, Constants::WindowName);
     }
+    Log("SUCCESS: Found main window handle: 0x%p", GMainWindow);
+    
     imguihooks::Init();
+    Log("INFO: ImGui hooks initialized.");
 
     // TODO: Properly scan for everything at once
     bool foundGObjects = false;
@@ -42,21 +54,37 @@ DWORD MainThread(HMODULE Module) {
             SDK::Offsets::GObjects = resolvedAddress + 0x10 - gameBase;
             SDK::UObject::GObjects.InitManually(manualInit);
             foundGObjects = true;
+            Log("SUCCESS: GUObjectArray initialized.");
         }
         else {
+            Log("INFO: GUObjectArray pattern not found, retrying...");
             Sleep(Constants::Time::GUObjectArrayPollIntervalMs);
         }
     }
+    Log("SUCCESS: Resolved GUObjectArray address: 0x%llX", resolvedAddress);
 
-
+    Log("INFO: Preparing to hook ProcessEvent...");
     void** Vft = SDK::UObject::GObjects->GetByIndex(0)->VTable;
     LPVOID** ProcessEvent = reinterpret_cast<LPVOID**>(reinterpret_cast<uintptr_t>(Vft[SDK::Offsets::ProcessEventIdx]));
+    Log("INFO: Found ProcessEvent VTable entry at: 0x%p", ProcessEvent);
 
-    MH_CreateHook(reinterpret_cast<LPVOID>(ProcessEvent), reinterpret_cast<void*>(Hooks::HkProcessEvent), reinterpret_cast<PVOID*>(&OProcessEvent));
-    MH_EnableHook(reinterpret_cast<LPVOID>(ProcessEvent));
+    status = MH_CreateHook(reinterpret_cast<LPVOID>(ProcessEvent), reinterpret_cast<void*>(Hooks::HkProcessEvent), reinterpret_cast<PVOID*>(&OProcessEvent));
+    if (status != MH_OK) {
+        LogFatal("Failed to create hook for ProcessEvent!");
+        return 1;
+    }
+
+    status = MH_EnableHook(reinterpret_cast<LPVOID>(ProcessEvent));
+    if (status != MH_OK) {
+        LogFatal("Failed to enable hook for ProcessEvent!");
+        return 1;
+    }
+    Log("SUCCESS: Hook for ProcessEvent created and enabled");
 
     // TODO: Clean
+    Log("INFO: Scanning for FName::AppendString");
     std::vector<void*> AppendStringaddrs = scanner.Scan(Constants::PatternScan::AppendStringPattern, Constants::Hooking::AppendStringPatternSearchCount);
+    Log("INFO: Found %zu potential candidates for AppendString.", AppendStringaddrs.size());
     bool appendStringFound = false;
     for (auto addr : AppendStringaddrs) {
         if (!addr) {
@@ -65,42 +93,31 @@ DWORD MainThread(HMODULE Module) {
         }
 
         auto real_addr = reinterpret_cast<uintptr_t>(addr);
-        std::cout << "real_addr: " << real_addr << "\n";
+        Log("DEBUG: [Candidate %zu] Address: 0x%llX", i, real_addr);
         uintptr_t AppendStringrva = real_addr - gameBase;
-        std::cout << "AppendStringrva: " << AppendStringrva << "\n";
         uint32_t AppendStringOffsetBase = *reinterpret_cast<uint32_t*>(real_addr + 0x3);
-        std::cout << "AppendStringOffsetBase: " << AppendStringOffsetBase << "\n";
         uint32_t AppendStringOffset = AppendStringOffsetBase + AppendStringrva + 0x7;
-        std::cout << "AppendStringOffset: " << AppendStringOffset << "\n";
         char* stringTest = reinterpret_cast<char*>(gameBase + AppendStringOffset);
 
         std::string cppStringTest(stringTest);
-        std::cout << "cppStringTest: " << cppStringTest << "\n";
+        Log("DEBUG: [Candidate %zu] Found string: '%s'", i, cppStringTest.c_str());
         if (cppStringTest == "ForwardShadingQuality_") {
             uint32_t REALAppendStringOffsetBase = *reinterpret_cast<uint32_t*>(real_addr + 35);
             uint32_t REALAppendStringOffset = REALAppendStringOffsetBase + AppendStringrva + 35 + 4;
 
-            std::cout << "REALAppendStringOffsetBase: " << REALAppendStringOffsetBase << "\n";
-            std::cout << "REALAppendStringOffset: " << REALAppendStringOffset << "\n";
             SDK::Offsets::AppendString = REALAppendStringOffset;
             SDK::FName::AppendString = reinterpret_cast<void*>(gameBase + REALAppendStringOffset);
+            Log("SUCCESS: AppendString found! Final offset: 0x%X", REALAppendStringOffset);
             appendStringFound = true;
             break;
         }
-        else{
-            std::cout << "ForwardShadingQuality_ was NOT FOUND PROPERLY!\n";
-        }
     }
 
-    std::cout << "AppendStringaddrs size: " << AppendStringaddrs.size() << "\n";
-    if(appendStringFound){
-        std::cout << "APPEND STRING WAS FOUND!\n";
-    }
-    else{
-        std::cout << "APPEND STRING WAS NOT FOUND!\n";
+    if(!appendStringFound){
+        LogFatal("FName::AppendString could not be found!");
     }
     Sleep(500000);
-    
+
     // TODO: Exit on fail? Probably should as it will crash anyways...
     std::vector<void*> FMemoryMallocAddrs = scanner.Scan(Constants::PatternScan::FMemoryMallocPattern);
     if (FMemoryMallocAddrs.size() == 1) {
