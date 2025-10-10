@@ -2,9 +2,8 @@ name: Build SHFMod DLL
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    tags:
+      - 'v*'
   
   workflow_dispatch:
 
@@ -22,8 +21,17 @@ jobs:
     - name: Build Solution
       run: msbuild SHFMod.sln /p:Configuration=Release /p:Platform=x64
 
-    - name: Upload DLL Artifact
-      uses: actions/upload-artifact@v4
+    - name: Package Release Files
+      run: Compress-Archive -Path x64/Release/SHFMod.* -DestinationPath SHFMod-${{ github.ref_name }}.zip
+      shell: powershell
+      
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: SHFMod
-        path: x64/Release/SHFMod.*
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        files: SHFMod-${{ github.ref_name }}.zip
