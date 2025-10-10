@@ -120,63 +120,40 @@ namespace imguihooks {
         struct CleanupGuard {
             ~CleanupGuard() { CleanupDummyObjects(); }
         } cleanup;
-        Log("Starting DX hooking");
 
         if (FAILED(CreateDeviceAndSwapChain())) {
-            Log("ERROR: CreateDeviceAndSwapChain failed. Aborting initialization.");
             return;
         }
-        Log("SUCCESS: D3D12 device and swap chain created.");
 
         // --- Hook Present on SwapChain ---
         auto scVTable = *reinterpret_cast<void***>(pSwapChain.Get());
         pPresentTarget = reinterpret_cast<LPVOID>(scVTable[kPresentIndex]);
-        MH_STATUS status = MH_CreateHook(
+        MH_CreateHook(
             pPresentTarget,
             reinterpret_cast<LPVOID>(d3d12hook::HkPresentD3D12),
             reinterpret_cast<LPVOID*>(&d3d12hook::oPresentD3D12)
         );
-        if (status != MH_OK) {
-            Log("ERROR: Failed to create hook for Present: %s", MH_StatusToString(status));
-            return;
-        }
-        Log("SUCCESS: Created hook for Present.");
 
 
         // --- Hook ResizeBuffers ---
         pResizeBuffersTarget = reinterpret_cast<LPVOID>(scVTable[kResizeBuffersIndex]);
-        status = MH_CreateHook(
+        MH_CreateHook(
             pResizeBuffersTarget,
             reinterpret_cast<LPVOID>(d3d12hook::HkResizeBuffersD3D12),
             reinterpret_cast<LPVOID*>(&d3d12hook::oResizeBuffersD3D12)
         );
-        if (status != MH_OK) {
-            Log("ERROR: Failed to create hook for ResizeBuffers: %s", MH_StatusToString(status));
-            return;
-        }
-        Log("SUCCESS: Created hook for ResizeBuffers.");
 
         // --- Hook ExecuteCommandLists ---
         auto cqVTable = *reinterpret_cast<void***>(pCommandQueue.Get());
         pExecuteCommandListsTarget = reinterpret_cast<LPVOID>(cqVTable[kExecuteCommandListsIndex]);
-        status = MH_CreateHook(
+        MH_CreateHook(
             pExecuteCommandListsTarget,
             reinterpret_cast<LPVOID>(d3d12hook::HkExecuteCommandListsD3D12),
             reinterpret_cast<LPVOID*>(&d3d12hook::oExecuteCommandListsD3D12)
         );
-        if (status != MH_OK) {
-            Log("ERROR: Failed to create hook for ExecuteCommandLists: %s", MH_StatusToString(status));
-            return;
-        }
-        Log("SUCCESS: Created hook for ExecuteCommandLists.");
 
         // --- Enable all hooks ---
-        status = MH_EnableHook(MH_ALL_HOOKS);
-        if (status != MH_OK) {
-            Log("ERROR: Failed to enable hooks: %s", MH_StatusToString(status));
-            return;
-        }
-        Log("SUCCESS: All DX hooks enabled.");
+        MH_EnableHook(MH_ALL_HOOKS);
     }
 
     void Remove() {

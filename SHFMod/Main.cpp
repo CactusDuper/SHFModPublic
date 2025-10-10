@@ -22,12 +22,7 @@ DWORD MainThread(HMODULE Module) {
 
     Log("--- Mod MainThread Started ---");
 
-    MH_STATUS status = MH_Initialize();
-    if (status != MH_OK) {
-        LogFatal("MinHook failed to initialize!");
-        return 1;
-    }
-    Log("SUCCESS: MinHook initialized.");
+    MH_Initialize();
 
     uint64_t gameBase = (uint64_t)GetModuleHandle(0);
     Log("INFO: Game base address: 0x%llX", gameBase);
@@ -68,18 +63,9 @@ DWORD MainThread(HMODULE Module) {
     LPVOID** ProcessEvent = reinterpret_cast<LPVOID**>(reinterpret_cast<uintptr_t>(Vft[SDK::Offsets::ProcessEventIdx]));
     Log("INFO: Found ProcessEvent VTable entry at: 0x%p", ProcessEvent);
 
-    status = MH_CreateHook(reinterpret_cast<LPVOID>(ProcessEvent), reinterpret_cast<void*>(Hooks::HkProcessEvent), reinterpret_cast<PVOID*>(&OProcessEvent));
-    if (status != MH_OK) {
-        LogFatal("Failed to create hook for ProcessEvent!");
-        return 1;
-    }
+    MH_CreateHook(reinterpret_cast<LPVOID>(ProcessEvent), reinterpret_cast<void*>(Hooks::HkProcessEvent), reinterpret_cast<PVOID*>(&OProcessEvent));
 
-    status = MH_EnableHook(reinterpret_cast<LPVOID>(ProcessEvent));
-    if (status != MH_OK) {
-        LogFatal("Failed to enable hook for ProcessEvent!");
-        return 1;
-    }
-    Log("SUCCESS: Hook for ProcessEvent created and enabled");
+    MH_EnableHook(reinterpret_cast<LPVOID>(ProcessEvent));
 
     // TODO: Clean
     Log("INFO: Scanning for FName::AppendString");
@@ -136,24 +122,15 @@ DWORD MainThread(HMODULE Module) {
     if (FMemoryMallocAddrs.size() == 1) {
         FMemory_Malloc = (Malloc_t)(FMemoryMallocAddrs[0]);
     }
-    else {
-        LogFatal("ERROR: FMemory::Malloc signature is broken!");
-    }
 
     std::vector<void*> FMemoryFreeAddrs = scanner.Scan(Constants::PatternScan::FMemoryFreePattern);
     if (FMemoryFreeAddrs.size() == 1) {
         FMemory_Free = (Free_t)(FMemoryFreeAddrs[0]);
     }
-    else {
-        LogFatal("ERROR: FMemory::Free signature is broken!");
-    }
 
     std::vector<void*> MarkRenderStateDirtyAddrs = scanner.Scan(Constants::PatternScan::MarkRenderStateDirtyPattern);
     if (MarkRenderStateDirtyAddrs.size() == 1) {
         MarkRenderStateDirty_Func = (MarkRenderStateDirty_t)(MarkRenderStateDirtyAddrs[0]);
-    }
-    else {
-        LogFatal("ERROR: MarkRenderStateAsDirty signature is broken!");
     }
 
 
