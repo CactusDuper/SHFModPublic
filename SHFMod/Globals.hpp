@@ -349,8 +349,10 @@ namespace Constants {
     static inline const char* WindowName = "SILENT HILL f  ";
 }
 
+#define ENABLE_LOGGING
 
 static void Log(const char* fmt, ...) {
+#ifdef ENABLE_LOGGING
     static std::mutex log_mutex;
     std::lock_guard<std::mutex> guard(log_mutex);
 
@@ -376,9 +378,12 @@ static void Log(const char* fmt, ...) {
     log_file << buffer << std::endl;
 
     printf("%s\n", buffer);
+#endif // ENABLE_LOGGING
 }
 
 static void LogFatal(const char* message) {
+#ifdef ENABLE_LOGGING
     Log("FATAL ERROR: %s", message);
     MessageBoxA(NULL, message, "Mod Fatal Error", MB_OK | MB_ICONERROR);
+#endif // ENABLE_LOGGING
 }

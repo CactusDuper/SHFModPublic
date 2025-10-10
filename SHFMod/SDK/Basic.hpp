@@ -352,8 +352,8 @@ public:
 		wchar_t buffer[1024];
 	    FString TempString(buffer, 0, 1024);
 	
-		if (!AppendString)
-			InitInternal();
+		//if (!AppendString)
+		//	InitInternal();
 	
 		InSDKUtils::CallGameFunction(reinterpret_cast<void(*)(const FName*, FString&)>(AppendString), this, TempString);
 	

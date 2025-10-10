@@ -106,6 +106,7 @@ DWORD MainThread(HMODULE Module) {
             SDK::Offsets::AppendString = REALAppendStringOffset;
             SDK::FName::AppendString = reinterpret_cast<void*>(gameBase + REALAppendStringOffset);
             Log("SUCCESS: AppendString found! Final offset: 0x%X", REALAppendStringOffset);
+            Log("AppendString Address: 0x%p", SDK::FName::AppendString);
             appendStringFound = true;
             break;
         }
@@ -114,7 +115,20 @@ DWORD MainThread(HMODULE Module) {
     if(!appendStringFound){
         LogFatal("FName::AppendString could not be found!");
     }
-    Sleep(500000);
+
+    int testCounter = 0;
+    for (int i = 0; i < SDK::UObject::GObjects->Num(); ++i) {
+        auto* obj = SDK::UObject::GObjects->GetByIndex(i);
+        if (obj && obj->IsValidChecked()) {
+            Log("AppendString Address: 0x%p", SDK::FName::AppendString);
+            std::string oName = obj->GetFullName();
+            Log(oName.c_str());
+            testCounter++;
+        }
+        if (testCounter > 10) {
+            break;
+        }
+    }
 
     // TODO: Exit on fail? Probably should as it will crash anyways...
     std::vector<void*> FMemoryMallocAddrs = scanner.Scan(Constants::PatternScan::FMemoryMallocPattern);
@@ -122,7 +136,7 @@ DWORD MainThread(HMODULE Module) {
         FMemory_Malloc = (Malloc_t)(FMemoryMallocAddrs[0]);
     }
     else {
-        std::cout << "ERROR: FMemory::Malloc signature is broken!\n";
+        LogFatal("ERROR: FMemory::Malloc signature is broken!");
     }
 
     std::vector<void*> FMemoryFreeAddrs = scanner.Scan(Constants::PatternScan::FMemoryFreePattern);
@@ -130,7 +144,7 @@ DWORD MainThread(HMODULE Module) {
         FMemory_Free = (Free_t)(FMemoryFreeAddrs[0]);
     }
     else {
-        std::cout << "ERROR: FMemory::Free signature is broken!\n";
+        LogFatal("ERROR: FMemory::Free signature is broken!");
     }
 
     std::vector<void*> MarkRenderStateDirtyAddrs = scanner.Scan(Constants::PatternScan::MarkRenderStateDirtyPattern);
@@ -138,7 +152,7 @@ DWORD MainThread(HMODULE Module) {
         MarkRenderStateDirty_Func = (MarkRenderStateDirty_t)(MarkRenderStateDirtyAddrs[0]);
     }
     else {
-        std::cout << "ERROR: MarkRenderStateAsDirty signature is broken!\n";
+        LogFatal("ERROR: MarkRenderStateAsDirty signature is broken!");
     }
 
 

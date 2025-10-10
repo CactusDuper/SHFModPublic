@@ -84,19 +84,17 @@ void Hooks::HkHUDPostRender(SDK::AHUD* HUD) {
 }
 
 void Hooks::HkProcessEvent(SDK::UObject* thiz, SDK::UFunction* function, void* parms) {
+    // For some reason, a crash can happen while grabbing function names for some users.
+    if (!thiz || !thiz->IsValidChecked() || !function) {
+        OProcessEvent(thiz, function, parms);
+        return;
+    }
+
     std::string funcName = function->GetName();
     std::string fullFuncName = function->GetFullName();
 
-    if (fullFuncName == "Function BP_Pl_Hina.BP_Pl_Hina_C.ReceiveBeginPlay") {
-        std::cout << "BP_Pl_Hina_C ReceiveBeginPlay called\n";
-        SetupPlayer();
-    }
-    else if (fullFuncName == "Function BP_Pl_Hina.BP_Pl_Hina_C.ReceiveEndPlay") {
-        std::cout << "BP_Pl_Hina_C ReceiveEndPlay called\n";
-        CleanupPlayer();
-    }
     // TODO: Remove?
-    else if (GProgressComponent && thiz == GProgressComponent && fullFuncName == "Function SMSystem.SMStateMachineComponent.Internal_OnStateMachineStateChanged") {
+    if (GProgressComponent && thiz == GProgressComponent && fullFuncName == "Function SMSystem.SMStateMachineComponent.Internal_OnStateMachineStateChanged") {
         if (GProgressComponent->R_Instance) {
             SDK::FGameplayTag progressTag = GProgressComponent->GetProgressTag();
             GCurrentGameStateName = L"State: " + SDK::FString(StringToWString(progressTag.TagName.ToString()).c_str()).ToWString();
@@ -134,7 +132,12 @@ void Hooks::HkProcessEvent(SDK::UObject* thiz, SDK::UFunction* function, void* p
     else if (funcName == "ReceiveBeginPlay") {
         if (!thiz->IsDefaultObject()) {
 
-            if (thiz->IsA(SDK::ABP_PlayerTrigger_Base_C::StaticClass())) { // TODO: ANocePlayerTriggerBase?
+            if (thiz->IsA(SDK::ABP_Pl_Hina_C::StaticClass())) {
+                Log("BP_Pl_Hina_C ReceiveBeginPlay called");
+                SetupPlayer();
+                Log("SetupPlayer done!");
+            }
+            else if (thiz->IsA(SDK::ABP_PlayerTrigger_Base_C::StaticClass())) { // TODO: ANocePlayerTriggerBase?
                 auto* trigger = static_cast<SDK::ABP_PlayerTrigger_Base_C*>(thiz);
                 GCustomTriggersToDraw.push_back(trigger->Index);
             }
@@ -180,6 +183,10 @@ void Hooks::HkProcessEvent(SDK::UObject* thiz, SDK::UFunction* function, void* p
     }
     else if (funcName == "ReceiveEndPlay") {
         if (!thiz->IsDefaultObject()) {
+            if (thiz->IsA(SDK::ABP_Pl_Hina_C::StaticClass())) {
+                Log("BP_Pl_Hina_C ReceiveEndPlay called");
+                CleanupPlayer();
+            }
             if (thiz->IsA(SDK::ABP_PlayerTrigger_Base_C::StaticClass())) {
                 auto* trigger = static_cast<SDK::ABP_PlayerTrigger_Base_C*>(thiz);
                 std::erase(GCustomTriggersToDraw, trigger->Index);
@@ -217,44 +224,56 @@ void SetupPlayer() {
     if (GFont == nullptr) {
         GFont = SDK::UObject::FindObject<SDK::UFont>("Font Roboto.Roboto");
     }
+    Log("Found font!");
 
     GWorld = SDK::UWorld::GetWorld();
+    if (!GWorld) {
+        LogFatal("Unable to find GWorld!\n");
+        return;
+    }
 
-    if (GWorld->OwningGameInstance != nullptr && GWorld->OwningGameInstance->LocalPlayers[0] != nullptr && GWorld->OwningGameInstance->LocalPlayers[0]->PlayerController != nullptr) {
+    if (GWorld && GWorld->OwningGameInstance && GWorld->OwningGameInstance->LocalPlayers[0] && GWorld->OwningGameInstance->LocalPlayers[0]->PlayerController) {
         auto PController = GWorld->OwningGameInstance->LocalPlayers[0]->PlayerController;
-
-        std::cout << PController->GetFullName() << "\n";
-        std::cout << GWorld->OwningGameInstance->LocalPlayers[0]->GetFullName() << "\n";
+        Log("Found PlayerController!");
         GLP = GWorld->OwningGameInstance->LocalPlayers[0];
-
         TryHookHUD();
+    }
+    else {
+        Log("Something went wrong when trying to get PlayerController!");
     }
 
 
     if (GWorld && GWorld->GameState && GWorld->GameState->IsA(SDK::ABP_NoceGameState_C::StaticClass())) {
         auto gState = static_cast<SDK::ABP_NoceGameState_C*>(GWorld->GameState);
         GProgressComponent = gState->GameProgress;
-        std::cout << "Found NoceGameProgressComponent!" << std::endl;
+        Log("Found NoceGameProgressComponent!");
 
         if (GProgressComponent && GProgressComponent->R_Instance) {
             GProgressFSM = GProgressComponent->R_Instance;
-            std::cout << "Successfully found Chapter FSM Instance: " << GProgressFSM->GetFullName() << std::endl;
+            Log("Successfully found Chapter FSM Instance!");
         }
         else {
-            std::cout << "Could not find R_Instance on NoceGameProgressComponent!" << std::endl;
+            Log("Could not find R_Instance on NoceGameProgressComponent!");
         }
+    }
+    else {
+        Log("Something went wrong trying to get GameState/ProgressCompoenent!");
     }
 
     if (GLP && GLP->PlayerController && GLP->PlayerController->PlayerState) {
         GPlayerState = static_cast<SDK::ABP_Pl_Hina_NocePlayerState_C*>(GLP->PlayerController->PlayerState);
-        std::cout << "Found PlayerState!" << std::endl;
+        Log("Found PlayerState!");
+    }
+    else {
+        Log("Unable to get PlayerState!");
     }
     CheckWorldForCustomTriggers(); // Initial scan for triggers
+    Log("Scanned for triggers!");
 }
 
 void TryHookHUD() {
     if (GLP && GLP->PlayerController && GLP->PlayerController->Character && GLP->PlayerController->Character->IsA(CharacterType::StaticClass())) {
-        std::cout << "trying to hook hud\n";
+        Log("trying to hook hud");
         CharacterType* player = static_cast<CharacterType*>(GLP->PlayerController->Character);
 
         SDK::APlayerState* playerState = static_cast<SDK::APlayerState*>(player->PlayerState);
@@ -272,7 +291,7 @@ void TryHookHUD() {
 
                     GIsHUDReady = true;
 
-                    std::cout << "HUD hook is done\n";
+                    Log("HUD hook is done");
                 }
             }
         }
@@ -281,6 +300,7 @@ void TryHookHUD() {
 
 // TODO: Cleanup everything missing from this
 void CleanupPlayer() {
+    Log("Cleaning up info!");
     GIsInGame = false;
 
     GLP = nullptr;
@@ -307,4 +327,5 @@ void CleanupPlayer() {
 
     GActiveGameplayTags.clear();
     GCurrentGameStateName = L"State: Unknown";
+    Log("Finished cleaning up info!");
 }
