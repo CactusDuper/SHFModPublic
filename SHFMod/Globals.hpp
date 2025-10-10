@@ -349,7 +349,6 @@ namespace Constants {
     static inline const char* WindowName = "SILENT HILL f  ";
 }
 
-#define ENABLE_LOGGING
 
 static void Log(const char* fmt, ...) {
 #ifdef ENABLE_LOGGING
