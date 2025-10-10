@@ -17,6 +17,12 @@
 
 namespace SDK
 {
+
+namespace Offsets {
+	int32 GObjects = 0x0;
+	int32 AppendString = 0x0;
+}
+
 uintptr_t InSDKUtils::GetImageBase()
 {
 	return reinterpret_cast<uintptr_t>(GetModuleHandle(0));

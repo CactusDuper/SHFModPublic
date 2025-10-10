@@ -107,6 +107,7 @@ DWORD MainThread(HMODULE Module) {
             SDK::FName::AppendString = reinterpret_cast<void*>(gameBase + REALAppendStringOffset);
             Log("SUCCESS: AppendString found! Final offset: 0x%X", REALAppendStringOffset);
             Log("AppendString Address: 0x%p", SDK::FName::AppendString);
+            SDK::FName::InitInternal();
             appendStringFound = true;
             break;
         }

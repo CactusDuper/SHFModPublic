@@ -28,8 +28,8 @@ using namespace UC;
 
 namespace Offsets
 {
-	static inline int32 GObjects        = 0x0;
-	static inline int32 AppendString    = 0x0;
+	extern int32 GObjects;
+	extern int32 AppendString;
 	constexpr int32 ProcessEventIdx     = 0x4D;
 	constexpr int32 HUDPostRenderIdx    = 0xF4;
 	constexpr int32 LPCalcSceneViewIdx  = 0x5D;
@@ -352,8 +352,9 @@ public:
 		wchar_t buffer[1024];
 	    FString TempString(buffer, 0, 1024);
 	
-		//if (!AppendString)
-		//	InitInternal();
+		if (!AppendString) {
+			InitInternal();
+		}
 	
 		InSDKUtils::CallGameFunction(reinterpret_cast<void(*)(const FName*, FString&)>(AppendString), this, TempString);
 	
